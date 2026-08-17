@@ -216,6 +216,82 @@ def generate_bookings(
         }
     )
 
+# ============================================================
+# PAYMENTS
+# ============================================================
+
+def generate_payments(bookings: pd.DataFrame) -> pd.DataFrame:
+    """Generate a synthetic payments dataset from bookings."""
+
+    payment_rows = []
+
+    payment_id = 1
+
+    for _, booking in bookings.iterrows():
+        booking_id = booking["booking_id"]
+        booking_amount = booking["total_amount"]
+        booking_status = booking["status"]
+
+        # Cancelled bookings do not generate a payment.
+        if booking_status == "CANCELLED":
+            continue
+
+        # Most bookings are paid in a single transaction.
+        payment_method = np.random.choice(
+            ["CREDIT_CARD", "PAYPAL", "BANK_TRANSFER"],
+            p=[0.60, 0.25, 0.15],
+        )
+
+        payment_rows.append(
+            {
+                "payment_id": f"P{payment_id:07d}",
+                "booking_id": booking_id,
+                "payment_date": booking["booking_date"],
+                "amount": booking_amount,
+                "payment_method": payment_method,
+                "payment_status": "COMPLETED",
+            }
+        )
+
+        payment_id += 1
+
+    return pd.DataFrame(payment_rows)
+
+# ============================================================
+# TRAVELERS
+# ============================================================
+
+def generate_travelers(bookings: pd.DataFrame) -> pd.DataFrame:
+    """Generate travelers linked to bookings."""
+
+    traveler_rows = []
+
+    traveler_id = 1
+
+    for _, booking in bookings.iterrows():
+        booking_id = booking["booking_id"]
+        number_of_travelers = booking["travelers"]
+
+        for _ in range(number_of_travelers):
+            traveler_rows.append(
+                {
+                    "traveler_id": f"T{traveler_id:07d}",
+                    "booking_id": booking_id,
+                    "age": np.random.randint(18, 76),
+                    "gender": np.random.choice(
+                        ["F", "M", "X"],
+                        p=[0.48, 0.48, 0.04],
+                    ),
+                    "traveler_type": np.random.choice(
+                        ["ADULT", "SENIOR"],
+                        p=[0.85, 0.15],
+                    ),
+                }
+            )
+
+            traveler_id += 1
+
+    return pd.DataFrame(traveler_rows)
 
 # ============================================================
 # MAIN
@@ -236,6 +312,8 @@ def main() -> None:
         customers,
         destinations,
     )
+    payments = generate_payments(bookings)
+    travelers = generate_travelers(bookings)
 
     destinations.to_csv(
         DATA_DIR / "destinations.csv",
@@ -251,11 +329,21 @@ def main() -> None:
         DATA_DIR / "bookings.csv",
         index=False,
     )
+    payments.to_csv(
+        DATA_DIR / "payments.csv",
+        index=False,
+    )
+
+    travelers.to_csv(
+        DATA_DIR / "travelers.csv",
+        index=False,
+    )
 
     print(f"Generated {len(destinations)} destinations")
     print(f"Generated {len(customers)} customers")
     print(f"Generated {len(bookings)} bookings")
-
+    print(f"Generated {len(payments)} payments")
+    print(f"Generated {len(travelers)} travelers")
 
 if __name__ == "__main__":
     main()
